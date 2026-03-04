@@ -20,7 +20,7 @@ program
 	.option('--no-initial-skill', 'Skip static analysis; start GEPA from an empty seed')
 	.option(
 		'-m, --agent-model <model>',
-		'Model for SWE agent (e.g. anthropic/claude-sonnet-4-6). Env: GSKILL_AGENT_MODEL',
+		'Model for SWE agent (e.g. anthropic/claude-sonnet-4-20250514). Env: GSKILL_AGENT_MODEL',
 	)
 	.option(
 		'-s, --skill-model <model>',
@@ -29,6 +29,10 @@ program
 	.option(
 		'-u, --base-url <url>',
 		'OpenAI-compatible base URL for local models. Env: OPENAI_BASE_URL',
+	)
+	.option(
+		'-b, --backend <type>',
+		'Execution backend: "local" (default, no Docker) or "docker" (SWE-smith images). Env: GSKILL_BACKEND',
 	)
 	.action(async (repoUrl: string, opts: Record<string, string | boolean>) => {
 		const { run } = await import('./pipeline.js');
@@ -40,6 +44,7 @@ program
 			agentModel: (opts.agentModel as string) || undefined,
 			skillModel: (opts.skillModel as string) || undefined,
 			baseUrl: (opts.baseUrl as string) || undefined,
+			backend: (opts.backend as string) || undefined,
 		});
 	});
 
@@ -57,7 +62,11 @@ program
 			const shown = allTasks.slice(0, limit);
 
 			const [owner, repoName] = repo.split('/', 2);
-			const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', 'T').split('.')[0];
+			const timestamp = new Date()
+				.toISOString()
+				.replace(/[-:]/g, '')
+				.replace('T', 'T')
+				.split('.')[0];
 			const filename = `${repoName}-${owner}--tasks-${timestamp}.json`;
 
 			await Bun.write(filename, JSON.stringify(shown, null, 2));

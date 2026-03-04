@@ -1,6 +1,7 @@
 /** GEPA evolutionary optimization loop with ax-llm for reflection/mutation. */
 
-import { ai } from '@ax-llm/ax';
+import type { AxAI } from '@ax-llm/ax';
+import { createLlm } from './llm.js';
 import type { Candidate, Evaluator, OptimizeResult, SWESmithTask } from './types.js';
 
 const REFLECTION_PROMPT = `You are an expert prompt engineer optimizing a SKILL.md file.
@@ -57,12 +58,14 @@ export async function optimize(
 	let bestCandidate: Candidate = pool[0]!;
 
 	// Create LLM for reflection/mutation
-	const reflectionLlm = ai({
-		name: 'anthropic',
-		config: { model: 'claude-opus-4-6' },
+	const reflectionLlm = createLlm({
+		provider: 'anthropic',
+		model: 'claude-opus-4-6',
 	});
 
-	console.log(`[gepa] Starting optimization (budget=${maxEvals}, pool=1, train=${trainTasks.length})`);
+	console.log(
+		`[gepa] Starting optimization (budget=${maxEvals}, pool=1, train=${trainTasks.length})`,
+	);
 
 	// Evaluate seed candidate
 	if (seed) {
@@ -71,7 +74,9 @@ export async function optimize(
 		pool[0]!.evalCount = seedResult.evalCount;
 		totalEvals += seedResult.evalCount;
 		bestCandidate = pool[0]!;
-		console.log(`[gepa] Seed score: ${seedResult.avgScore.toFixed(2)} (${seedResult.evalCount} evals)`);
+		console.log(
+			`[gepa] Seed score: ${seedResult.avgScore.toFixed(2)} (${seedResult.evalCount} evals)`,
+		);
 	}
 
 	// Main optimization loop
@@ -87,18 +92,18 @@ export async function optimize(
 		const minibatch = sampleMinibatch(trainTasks, minibatchSize);
 
 		// Evaluate parent on this minibatch
-		const parentResult = await evaluateOnMinibatch(evaluator, parent.skill, minibatch, minibatchSize);
+		const parentResult = await evaluateOnMinibatch(
+			evaluator,
+			parent.skill,
+			minibatch,
+			minibatchSize,
+		);
 		totalEvals += parentResult.evalCount;
 
 		if (totalEvals >= maxEvals) break;
 
 		// Reflect and mutate
-		const mutant = await reflect(
-			reflectionLlm,
-			parent.skill,
-			parentResult,
-			objective,
-		);
+		const mutant = await reflect(reflectionLlm, parent.skill, parentResult, objective);
 
 		if (!mutant || mutant === parent.skill) {
 			console.log(`[gepa] Gen ${generation}: reflection produced no change, skipping`);
@@ -219,7 +224,7 @@ function sampleMinibatch(tasks: SWESmithTask[], size: number): SWESmithTask[] {
 
 /** Use ax-llm to reflect on failures and produce an improved skill. */
 async function reflect(
-	llm: ReturnType<typeof ai>,
+	llm: AxAI,
 	currentSkill: string,
 	evalResult: {
 		avgScore: number;
@@ -234,21 +239,27 @@ async function reflect(
 		.map((d) => `- ${d.instanceId}: ${d.reason}`)
 		.join('\n');
 
-	const prompt = REFLECTION_PROMPT.replace('{SKILL}', currentSkill || '(empty - no skill yet)')
+	const prompt = `${REFLECTION_PROMPT.replace('{SKILL}', currentSkill || '(empty - no skill yet)')
 		.replace('{N_TASKS}', String(evalResult.evalCount))
 		.replace('{AVG_SCORE}', evalResult.avgScore.toFixed(2))
 		.replace('{N_PASSED}', String(nPassed))
-		.replace('{FAILURE_DETAILS}', failureDetails || '(no detailed failure info available)')
-		+ `\n\nObjective: ${objective}`;
+		.replace(
+			'{FAILURE_DETAILS}',
+			failureDetails || '(no detailed failure info available)',
+		)}\n\nObjective: ${objective}`;
 
 	try {
 		const response = await llm.chat({
 			chatPrompt: [{ role: 'user' as const, content: prompt }],
-			maxTokens: 3000,
+			modelConfig: { maxTokens: 3000 },
 		});
 
-		const results = (response as { results?: Array<{ content?: string }> }).results;
-		const content = results?.[0]?.content;
+		if (response instanceof ReadableStream) {
+			console.warn('[gepa] Reflection returned an unexpected stream response');
+			return currentSkill;
+		}
+
+		const content = response.results[0]?.content;
 
 		if (!content) return currentSkill;
 

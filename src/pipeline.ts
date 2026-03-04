@@ -1,5 +1,6 @@
 /** Top-level pipeline orchestration: load tasks -> seed -> optimize -> save. */
 
+import { createBackend } from './backend.js';
 import { parseRepoUrl, resolveConfig } from './config.js';
 import { makeEvaluator } from './evaluator.js';
 import { optimize } from './optimize.js';
@@ -18,11 +19,13 @@ export async function run(opts: {
 	agentModel?: string;
 	skillModel?: string;
 	baseUrl?: string;
+	backend?: string;
 }): Promise<OptimizeResult> {
 	const config = resolveConfig(opts);
 	const repoId = parseRepoUrl(config.repoUrl);
 
 	console.log(`[gskill] Repo: ${repoId.slug}`);
+	console.log(`[gskill] Backend: ${config.backend}`);
 
 	// 1. Load tasks
 	console.log('[gskill] Loading tasks from SWE-smith...');
@@ -46,18 +49,17 @@ export async function run(opts: {
 		console.log('[gskill] Skipping initial skill generation (--no-initial-skill).');
 	}
 
-	// 3. Run GEPA optimization
-	const evaluator = makeEvaluator(config);
-	const objective =
-		`Maximize the resolve rate on software engineering tasks ` +
-		`for the ${repoId.slug} repository. ` +
-		`The skill should help the coding agent understand the repo's test commands, ` +
-		`code structure, and common patterns.`;
+	// 3. Create execution backend
+	const backend = await createBackend(config.backend);
+
+	// 4. Run GEPA optimization
+	const evaluator = makeEvaluator(config, backend);
+	const objective = `Maximize the resolve rate on software engineering tasks for the ${repoId.slug} repository. The skill should help the coding agent understand the repo's test commands, code structure, and common patterns.`;
 
 	console.log(`[gskill] Starting GEPA optimization (max_evals=${config.maxEvals})...`);
 	const result = await optimize(seedSkill, evaluator, train, val, config.maxEvals, objective);
 
-	// 4. Save best skill
+	// 5. Save best skill
 	const outPath = await saveSkill(result.bestSkill, repoId.slug, config.outputDir);
 	console.log(`[gskill] Best resolve rate: ${(result.bestScore * 100).toFixed(1)}%`);
 	console.log(`[gskill] Skill saved to: ${outPath}`);

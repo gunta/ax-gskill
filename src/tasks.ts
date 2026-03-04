@@ -31,8 +31,7 @@ export async function loadTasks(repoName: string, n = 300): Promise<SWESmithTask
 
 	if (tasks.length === 0) {
 		throw new Error(
-			`No tasks found for repo '${repoName}' in ${DATASET_ID}. ` +
-				"Use the full 'owner/repo' format, e.g., 'pallets/jinja'.",
+			`No tasks found for repo '${repoName}' in ${DATASET_ID}. Use the full 'owner/repo' format, e.g., 'pallets/jinja'.`,
 		);
 	}
 
@@ -135,11 +134,7 @@ function parseStringArray(val: unknown): string[] {
  * Deterministic split into train/val/test sets.
  * Matches Python's 67/17/16% split.
  */
-export function splitTasks(
-	tasks: SWESmithTask[],
-	trainFrac = 0.67,
-	valFrac = 0.17,
-): TaskSplit {
+export function splitTasks(tasks: SWESmithTask[], trainFrac = 0.67, valFrac = 0.17): TaskSplit {
 	const n = tasks.length;
 	const nTrain = Math.floor(n * trainFrac);
 	const nVal = Math.floor(n * valFrac);

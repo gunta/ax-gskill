@@ -2,7 +2,7 @@
 
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { ai } from '@ax-llm/ax';
+import { createLlm } from './llm.js';
 import type { PipelineConfig } from './types.js';
 
 /**
@@ -83,21 +83,15 @@ export async function generateInitialSkill(
 		}
 	}
 
-	const llmConfig: Record<string, unknown> = {
+	const llm = createLlm({
+		provider: config.skillProvider,
 		model: config.skillModel,
-	};
-	if (config.baseUrl) {
-		llmConfig.baseURL = config.baseUrl;
-	}
-
-	const llm = ai({
-		name: config.skillProvider as 'openai' | 'anthropic',
-		config: llmConfig as { model: string },
+		baseUrl: config.baseUrl,
 	});
 
 	const prompt = `You are generating a SKILL.md for the '${repo}' repository.
 This skill file will be injected into the system prompt of a coding agent that must
-solve GitHub issues by modifying source files in a Docker container at /testbed.
+solve GitHub issues by modifying source files in a repository checkout.
 
 Repository URL: ${repoUrl}
 
@@ -132,16 +126,19 @@ Constraints:
 
 	const response = await llm.chat({
 		chatPrompt: [{ role: 'user' as const, content: prompt }],
-		maxTokens: 2000,
+		modelConfig: { maxTokens: 2000 },
 	});
+
+	if (response instanceof ReadableStream) {
+		throw new Error('Skill generation failed — model returned an unexpected stream');
+	}
 
 	if (!response || typeof response !== 'object') {
 		throw new Error('Skill generation failed — model returned an empty response');
 	}
 
 	// Extract text content from response
-	const results = (response as { results?: Array<{ content?: string }> }).results;
-	const content = results?.[0]?.content;
+	const content = response.results[0]?.content;
 
 	if (!content) {
 		throw new Error(

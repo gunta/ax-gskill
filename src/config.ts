@@ -2,7 +2,7 @@
 
 import type { PipelineConfig, RepoId } from './types.js';
 
-const DEFAULT_AGENT_MODEL = 'anthropic/claude-sonnet-4-6';
+const DEFAULT_AGENT_MODEL = 'anthropic/claude-sonnet-4-20250514';
 const DEFAULT_SKILL_MODEL = 'anthropic/claude-opus-4-6';
 
 /**
@@ -35,9 +35,7 @@ export function parseRepoUrl(repoUrl: string): RepoId {
 		owner = parts[0]!;
 		repo = parts[1]!;
 	} else {
-		throw new Error(
-			`Cannot parse repo URL: ${repoUrl}. Use "owner/repo" or a full GitHub URL.`,
-		);
+		throw new Error(`Cannot parse repo URL: ${repoUrl}. Use "owner/repo" or a full GitHub URL.`);
 	}
 
 	return {
@@ -60,12 +58,16 @@ export function resolveConfig(opts: {
 	agentModel?: string;
 	skillModel?: string;
 	baseUrl?: string;
+	backend?: string;
 }): PipelineConfig {
-	const agentModelStr =
-		opts.agentModel || process.env.GSKILL_AGENT_MODEL || DEFAULT_AGENT_MODEL;
-	const skillModelStr =
-		opts.skillModel || process.env.GSKILL_SKILL_MODEL || DEFAULT_SKILL_MODEL;
+	const agentModelStr = opts.agentModel || process.env.GSKILL_AGENT_MODEL || DEFAULT_AGENT_MODEL;
+	const skillModelStr = opts.skillModel || process.env.GSKILL_SKILL_MODEL || DEFAULT_SKILL_MODEL;
 	const baseUrl = opts.baseUrl || process.env.OPENAI_BASE_URL || undefined;
+	const backendStr = opts.backend || process.env.GSKILL_BACKEND || 'local';
+
+	if (backendStr !== 'local' && backendStr !== 'docker') {
+		throw new Error(`Invalid backend '${backendStr}'. Must be 'local' or 'docker'.`);
+	}
 
 	const agent = parseModelString(agentModelStr);
 	const skill = parseModelString(skillModelStr);
@@ -80,5 +82,6 @@ export function resolveConfig(opts: {
 		skillModel: skill.model,
 		skillProvider: skill.provider,
 		baseUrl,
+		backend: backendStr,
 	};
 }

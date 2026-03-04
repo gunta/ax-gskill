@@ -25,7 +25,7 @@ bun run build            # Compile standalone binary to dist/ax-gskill
   - `-o, --output-dir` (default: `.claude/skills`)
   - `-n, --max-evals` (default: 150)
   - `--no-initial-skill` — skip LLM seed, start from empty
-  - `-m, --agent-model` — e.g. `anthropic/claude-sonnet-4-6`
+  - `-m, --agent-model` — e.g. `anthropic/claude-sonnet-4-20250514`
   - `-s, --skill-model` — e.g. `anthropic/claude-opus-4-6`
   - `-u, --base-url` — OpenAI-compatible base URL
 - `ax-gskill tasks <owner/repo>` — list SWE-smith tasks
@@ -65,7 +65,7 @@ test/
 |----------|---------|-------------|
 | `ANTHROPIC_API_KEY` | required | Anthropic API key |
 | `OPENAI_API_KEY` | -- | OpenAI API key (if using OpenAI models) |
-| `GSKILL_AGENT_MODEL` | `anthropic/claude-sonnet-4-6` | SWE agent model |
+| `GSKILL_AGENT_MODEL` | `anthropic/claude-sonnet-4-20250514` | SWE agent model |
 | `GSKILL_SKILL_MODEL` | `anthropic/claude-opus-4-6` | Skill gen + reflection model |
 | `OPENAI_BASE_URL` | -- | Custom base URL |
 

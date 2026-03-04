@@ -65,13 +65,13 @@ bun run start run https://github.com/pallets/jinja --agent-model openai/gpt-4o
 bun run start run https://github.com/pallets/jinja --skill-model openai/gpt-4o
 ```
 
-Models are specified as `provider/model` (e.g. `anthropic/claude-sonnet-4-6`, `openai/gpt-4o`). You can also set defaults via environment variables:
+Models are specified as `provider/model` (e.g. `anthropic/claude-sonnet-4-20250514`, `openai/gpt-4o`). You can also set defaults via environment variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ANTHROPIC_API_KEY` | -- | API key for Anthropic models |
 | `OPENAI_API_KEY` | -- | API key for OpenAI models |
-| `GSKILL_AGENT_MODEL` | `anthropic/claude-sonnet-4-6` | Model for the SWE agent |
+| `GSKILL_AGENT_MODEL` | `anthropic/claude-sonnet-4-20250514` | Model for the SWE agent |
 | `GSKILL_SKILL_MODEL` | `anthropic/claude-opus-4-6` | Model for skill generation + GEPA reflection |
 | `OPENAI_BASE_URL` | -- | Custom base URL for compatible APIs |
 

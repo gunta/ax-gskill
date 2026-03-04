@@ -56,6 +56,7 @@ export interface PipelineConfig {
 	skillModel: string;
 	skillProvider: string;
 	baseUrl?: string;
+	backend: 'local' | 'docker';
 }
 
 /** A GEPA-compatible evaluator function. */

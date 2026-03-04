@@ -1,25 +1,24 @@
-/** GEPA-compatible evaluator: combines agent + Docker test verification. */
+/** GEPA-compatible evaluator: combines agent + execution backend test verification. */
 
 import { runAgent } from './agent.js';
-import { runTests } from './docker.js';
+import type { ExecutionBackend } from './backend.js';
 import type { EvalInfo, Evaluator, PipelineConfig, SWESmithTask } from './types.js';
 
 /**
  * Create a GEPA-compatible evaluator that runs the SWE agent on a task
  * and verifies the patch by running FAIL_TO_PASS tests.
  */
-export function makeEvaluator(config: PipelineConfig): Evaluator {
+export function makeEvaluator(config: PipelineConfig, backend: ExecutionBackend): Evaluator {
 	return async (skill: string, task: SWESmithTask): Promise<[number, EvalInfo]> => {
 		const instanceId = task.instance_id ?? 'unknown';
 
 		// Run the agent
-		const { patch, error } = await runAgent(task, skill, config);
+		const { patch, error } = await runAgent(task, skill, config, backend);
 
 		// If no patch was produced, score is 0
 		if (!patch.trim()) {
 			console.log(
-				`[eval] instance=${instanceId} no patch submitted score=0.0` +
-					(error ? `; agent error: ${error}` : ''),
+				`[eval] instance=${instanceId} no patch submitted score=0.0${error ? `; agent error: ${error}` : ''}`,
 			);
 			return [
 				0,
@@ -34,7 +33,7 @@ export function makeEvaluator(config: PipelineConfig): Evaluator {
 		}
 
 		// Verify patch by running tests
-		const result = await runTests(task, patch);
+		const result = await backend.runTests(task, patch);
 		const score = result.passed ? 1 : 0;
 
 		console.log(
