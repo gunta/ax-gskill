@@ -1,13 +1,11 @@
 # AI
 .claude/
 
-# Python-generated files
-__pycache__/
-*.py[oc]
-build/
+# Node / Bun
+node_modules/
 dist/
-wheels/
-*.egg-info
+bun.lock
+*.tsbuildinfo
 
-# Virtual environments
-.venv
+# OS
+.DS_Store
